@@ -898,6 +898,7 @@ var state = {
   notify: false,
   commands: "",
   windowOverrides: [],  // per-window: null (use mode color) or {color:"#hex"} or {theme:"Name"}
+  activePreset: null,   // name of currently loaded preset (null if manually changed)
 };
 
 var serverAvailable = false;
@@ -1642,9 +1643,14 @@ function loadState() {
 
 // Auto-save on every update
 var _origUpdate = update;
+var _presetLoading = false;
 function update() {
   buildLayoutThumbnails();
   updatePreview();
+  if (!_presetLoading && state.activePreset) {
+    state.activePreset = null;
+    renderPresets();
+  }
   saveState();
 }
 
@@ -1877,8 +1883,12 @@ function loadPreset(name) {
   if (preset.commands !== undefined) document.getElementById("commandsInput").value = preset.commands || "";
   if (window._showHideSoundSettings) window._showHideSoundSettings();
   if (window._showHideDangerWarning) window._showHideDangerWarning();
+  state.activePreset = name;
+  _presetLoading = true;
   buildModeSwatches();
   update();
+  _presetLoading = false;
+  renderPresets();
 }
 
 function deletePreset(name) {
@@ -1899,7 +1909,8 @@ function renderPresets() {
   }
   presets.forEach(function(p) {
     var chip = createEl("div", "");
-    chip.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;border:1px solid rgba(28,28,30,0.12);background:white;cursor:pointer;font-family:var(--font-mono);font-size:10px;font-weight:500;letter-spacing:0.03em;";
+    var isActive = state.activePreset === p.name;
+    chip.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;border:1.5px solid " + (isActive ? "var(--champagne)" : "rgba(28,28,30,0.12)") + ";background:" + (isActive ? "rgba(90,125,150,0.08)" : "white") + ";cursor:pointer;font-family:var(--font-mono);font-size:10px;font-weight:" + (isActive ? "600" : "500") + ";letter-spacing:0.03em;color:" + (isActive ? "var(--slate)" : "inherit") + ";transition:all 0.15s;";
     var label = createEl("span", "", p.name);
     label.onclick = function() { loadPreset(p.name); };
     var del = createEl("span", "", "x");
