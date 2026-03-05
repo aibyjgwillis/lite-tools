@@ -642,6 +642,32 @@
   }
   .save-indicator.visible { opacity: 1; transform: translateY(0); }
 
+  .editing-pill {
+    position: fixed;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--champagne);
+    background: rgba(90,125,150,0.08);
+    border: 1px solid rgba(90,125,150,0.18);
+    padding: 5px 14px;
+    border-radius: 20px;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    z-index: 100;
+    white-space: nowrap;
+  }
+  .editing-pill.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
 </style>
 </head>
 <body>
@@ -714,6 +740,7 @@
     </div>
   </div>
   <div class="save-indicator" id="saveIndicator">Saved</div>
+  <div class="editing-pill" id="editingPill"></div>
 
   <!-- Presets -->
   <div class="card" style="position:relative;">
@@ -1851,6 +1878,16 @@ function buildPresetData(name) {
   };
 }
 
+function updateEditingPill() {
+  var pill = document.getElementById("editingPill");
+  if (state.activePreset) {
+    pill.textContent = "Editing " + state.activePreset;
+    pill.classList.add("visible");
+  } else {
+    pill.classList.remove("visible");
+  }
+}
+
 function showPresetToast(msg) {
   var el = document.getElementById("presetToast");
   el.textContent = msg;
@@ -1966,6 +2003,7 @@ function renderPresets() {
     var hint = createEl("span", "", "No saved presets");
     hint.style.cssText = "font-size:11px;color:rgba(28,28,30,0.3);font-family:var(--font-mono);";
     container.appendChild(hint);
+    updateEditingPill();
     return;
   }
   presets.forEach(function(p) {
@@ -1991,6 +2029,7 @@ function renderPresets() {
     }
     container.appendChild(chip);
   });
+  updateEditingPill();
 }
 
 // --- Highlight color swatch ---
