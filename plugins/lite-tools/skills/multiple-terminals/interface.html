@@ -2165,13 +2165,16 @@ renderPresets();
 update();
 detectServer();
 
-// Click on page background to dismiss preset editing
-document.addEventListener("click", function(e) {
+// Click outside preset area to dismiss preset editing
+document.addEventListener("mousedown", function(e) {
   if (!state.activePreset) return;
   var bar = document.getElementById("editingBar");
   if (bar && bar.contains(e.target)) return;
-  // Only dismiss if clicking on the page background itself, not on any interactive element
-  if (e.target.closest(".card, button, .toggle, .color-chip, .theme-chip, .layout-thumb, .include-btn, input, select, a")) return;
+  var presetCard = document.getElementById("presetList");
+  if (presetCard) {
+    var card = presetCard.closest(".card");
+    if (card && card.contains(e.target)) return;
+  }
   cancelPreset();
 });
 </script>
