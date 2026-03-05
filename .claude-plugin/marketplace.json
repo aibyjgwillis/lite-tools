@@ -7,13 +7,13 @@
   },
   "plugins": [
     {
-      "name": "tools",
+      "name": "lite-tools",
       "description": "Free collection of useful Claude Code tools including folder coloring, and more to come.",
       "version": "1.0.0",
       "author": {
         "name": "aibyjgwillis"
       },
-      "source": "./plugins/tools",
+      "source": "./plugins/lite-tools",
       "category": "productivity"
     }
   ]
