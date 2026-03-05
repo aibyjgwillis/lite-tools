@@ -200,7 +200,7 @@ def main():
     idle_streak = {}    # window_idx -> consecutive idle polls
     active_streak = {}  # window_idx -> consecutive active polls
     IDLE_THRESHOLD = 1    # highlight immediately on first idle detection
-    ACTIVE_THRESHOLD = 2  # require 2 consecutive active polls before restoring (prevents flicker)
+    ACTIVE_THRESHOLD = 1  # restore immediately when active
     poll_interval = 2.0
     empty_polls = 0
     config_check_counter = 0
