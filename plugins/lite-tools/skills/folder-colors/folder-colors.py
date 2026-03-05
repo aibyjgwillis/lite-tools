@@ -1729,8 +1729,7 @@ function reapplyActiveLayerTheme() {
   for (let d = layerStartDepth; d <= layerEndDepth; d++) {
     const idx = d - layerStartDepth;
     const color = idx < colors.length ? colors[idx] : colors[colors.length - 1];
-    // Only enable newly added levels (no color yet), preserve existing enabled state
-    if (!layerColors[d]) layerEnabled[d] = true;
+    // Assign color but don't change enabled state
     layerColors[d] = color;
   }
   currentColor = layerColors[layerStartDepth];
