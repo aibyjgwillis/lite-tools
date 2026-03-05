@@ -642,31 +642,62 @@
   }
   .save-indicator.visible { opacity: 1; transform: translateY(0); }
 
-  .editing-pill {
+  .editing-bar {
     position: fixed;
-    top: 14px;
+    bottom: 20px;
     left: 50%;
-    transform: translateX(-50%) translateY(-8px);
+    transform: translateX(-50%) translateY(12px);
+    display: flex;
+    align-items: center;
+    gap: 12px;
     font-family: var(--font-mono);
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--champagne);
-    background: rgba(90,125,150,0.08);
-    border: 1px solid rgba(90,125,150,0.18);
-    padding: 5px 14px;
-    border-radius: 20px;
+    background: var(--slate);
+    color: var(--ivory);
+    padding: 8px 10px 8px 16px;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
     opacity: 0;
     transition: opacity 0.2s, transform 0.2s;
     pointer-events: none;
     z-index: 100;
     white-space: nowrap;
   }
-  .editing-pill.visible {
+  .editing-bar.visible {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
   }
+  .editing-bar .bar-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+  .editing-bar .bar-name {
+    font-weight: 700;
+    color: var(--champagne);
+  }
+  .editing-bar .bar-btn {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .editing-bar .bar-save {
+    background: var(--champagne);
+    color: var(--slate);
+  }
+  .editing-bar .bar-save:hover { filter: brightness(1.1); }
+  .editing-bar .bar-dismiss {
+    background: rgba(255,255,255,0.1);
+    color: var(--ivory);
+  }
+  .editing-bar .bar-dismiss:hover { background: rgba(255,255,255,0.18); }
 
 </style>
 </head>
@@ -740,7 +771,11 @@
     </div>
   </div>
   <div class="save-indicator" id="saveIndicator">Saved</div>
-  <div class="editing-pill" id="editingPill"></div>
+  <div class="editing-bar" id="editingBar">
+    <span class="bar-label">Modifying <span class="bar-name" id="editingBarName"></span></span>
+    <button class="bar-btn bar-save" onclick="savePreset()">Save</button>
+    <button class="bar-btn bar-dismiss" onclick="dismissPreset()">Discard</button>
+  </div>
 
   <!-- Presets -->
   <div class="card" style="position:relative;">
@@ -1879,13 +1914,18 @@ function buildPresetData(name) {
 }
 
 function updateEditingPill() {
-  var pill = document.getElementById("editingPill");
+  var bar = document.getElementById("editingBar");
   if (state.activePreset) {
-    pill.textContent = "Editing " + state.activePreset;
-    pill.classList.add("visible");
+    document.getElementById("editingBarName").textContent = state.activePreset;
+    bar.classList.add("visible");
   } else {
-    pill.classList.remove("visible");
+    bar.classList.remove("visible");
   }
+}
+
+function dismissPreset() {
+  state.activePreset = null;
+  renderPresets();
 }
 
 function showPresetToast(msg) {
