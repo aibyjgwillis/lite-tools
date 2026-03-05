@@ -86,6 +86,11 @@ def run_preflight():
 
     return all_ok
 
+# Heartbeat: track last ping from browser, auto-shutdown when tab closes
+import time as _time
+_last_heartbeat = _time.time()
+_heartbeat_timeout = 10  # seconds without a ping before shutdown
+
 # Preview cache: maps "color|opacity" -> PNG bytes
 _preview_cache = {}
 
@@ -841,6 +846,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self._json(_pending_layers)
             else:
                 self._json({"version": _layers_version})
+        elif parsed.path == "/api/heartbeat":
+            global _last_heartbeat
+            _last_heartbeat = _time.time()
+            self._json({"ok": True})
         elif parsed.path == "/api/wallpaper":
             wp = get_wallpaper_path()
             if not wp:
@@ -2964,6 +2973,9 @@ function pollForLayers() {
 setInterval(pollForLayers, 2000);
 pollForLayers();
 
+// Heartbeat: tell server we're still here
+setInterval(() => { fetch('/api/heartbeat').catch(() => {}); }, 4000);
+
 // Welcome banner (shows once, dismissed with localStorage)
 (function() {
   var banner = document.getElementById('welcomeBanner');
@@ -2989,10 +3001,23 @@ if __name__ == "__main__":
     run_preflight()
     server = ThreadedHTTPServer(("127.0.0.1", PORT), Handler)
     print(f"Server running at http://localhost:{PORT}")
-    print("Press Ctrl+C to stop.\n")
+    print("Server will stop automatically when you close the browser tab.\n")
+
+    def heartbeat_watchdog():
+        """Shut down the server when the browser tab is closed."""
+        _time.sleep(15)  # grace period for initial page load
+        while True:
+            _time.sleep(3)
+            if _time.time() - _last_heartbeat > _heartbeat_timeout:
+                print("\nBrowser tab closed. Shutting down.")
+                server.shutdown()
+                return
+
+    watchdog = threading.Thread(target=heartbeat_watchdog, daemon=True)
+    watchdog.start()
     threading.Timer(0.5, lambda: webbrowser.open(f"http://localhost:{PORT}")).start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         print("\nStopped.")
-        server.server_close()
+    server.server_close()

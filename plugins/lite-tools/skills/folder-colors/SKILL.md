@@ -12,7 +12,7 @@ When this skill is invoked, immediately launch the Folder Colors web app by runn
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/folder-colors/folder-colors.py
 ```
 
-Then tell the user the app is running at http://localhost:9847 and should have opened in their browser. Remind them to press Ctrl+C in the terminal to stop the server when done.
+Then tell the user the app is running at http://localhost:9847 and should have opened in their browser. The server stops automatically when the browser tab is closed.
 
 If port 9847 is already in use, kill the existing process first:
 
