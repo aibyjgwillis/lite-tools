@@ -1960,6 +1960,21 @@ function deleteActivePreset() {
   showPresetToast("Preset deleted");
 }
 
+function renameActivePreset() {
+  if (!state.activePreset) return;
+  var oldName = state.activePreset;
+  var newName = prompt("Rename preset:", oldName);
+  if (!newName || !newName.trim() || newName.trim() === oldName) return;
+  newName = newName.trim();
+  var presets = getPresets();
+  var p = presets.find(function(x) { return x.name === oldName; });
+  if (p) p.name = newName;
+  savePresets(presets);
+  state.activePreset = newName;
+  renderPresets();
+  showPresetToast("Preset renamed");
+}
+
 function saveAsNewPreset() {
   var name = prompt("Preset name:");
   if (!name || !name.trim()) return;
@@ -2173,6 +2188,7 @@ detectServer();
 <div class="editing-bar" id="editingBar">
   <span class="bar-label">Modifying <span class="bar-name" id="editingBarName"></span></span>
   <button class="bar-btn bar-save" onclick="savePreset()">Save</button>
+  <button class="bar-btn bar-save-new" onclick="renameActivePreset()">Rename</button>
   <button class="bar-btn bar-save-new" onclick="saveAsNewFromBar()">Save as New</button>
   <button class="bar-btn bar-delete" onclick="deleteActivePreset()">Delete</button>
   <button class="bar-btn bar-dismiss" onclick="cancelPreset()">Cancel</button>
