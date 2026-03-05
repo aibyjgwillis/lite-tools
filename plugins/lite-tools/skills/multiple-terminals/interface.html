@@ -44,6 +44,14 @@
     background: rgba(28,28,30,0.06); border-radius: 2rem; padding: 5px 14px;
     color: var(--champagne);
   }
+  .topbar-tabs { display: flex; background: rgba(28,28,30,0.05); border-radius: 2rem; padding: 3px; }
+  .topbar-tab {
+    padding: 7px 20px; border-radius: 2rem; border: none; font-family: var(--font-heading);
+    font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s;
+    color: rgba(28,28,30,0.45); background: none; letter-spacing: 0.02em;
+  }
+  .topbar-tab:hover { color: var(--slate); }
+  .topbar-tab.active { background: var(--slate); color: var(--ivory); }
   /* ==/THEME:TOPBAR== */
 
   /* ==THEME:FADEIN== */
@@ -57,7 +65,7 @@
   }
   .page-subtitle {
     font-family: var(--font-mono); font-size: 12px; color: var(--champagne);
-    text-align: center; margin-bottom: 20px;
+    text-align: center; margin-bottom: 40px;
   }
   /* ==/THEME:PAGE_TITLE== */
 
@@ -65,14 +73,14 @@
   .section-label {
     font-family: var(--font-mono); font-size: 10px; font-weight: 600;
     text-transform: uppercase; letter-spacing: 0.14em; color: var(--champagne);
-    margin-bottom: 8px;
+    margin-bottom: 12px;
   }
   /* ==/THEME:SECTION_LABEL== */
 
   /* ==THEME:CARDS== */
   .card {
     background: white; border: 1px solid rgba(28,28,30,0.08);
-    border-radius: 12px; padding: 16px 20px; margin-bottom: 14px;
+    border-radius: 12px; padding: 20px 24px; margin-bottom: 20px;
   }
   .card-champagne { background: rgba(90,125,150,0.04); border-color: rgba(90,125,150,0.12); }
   .card-amber { background: var(--amber-bg); border-color: rgba(184,134,11,0.15); }
