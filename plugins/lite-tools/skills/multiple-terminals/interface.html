@@ -716,10 +716,11 @@
   <div class="save-indicator" id="saveIndicator">Saved</div>
 
   <!-- Presets -->
-  <div class="card">
+  <div class="card" style="position:relative;">
     <div style="display:flex;align-items:center;gap:10px;">
       <span class="section-label" style="margin:0;">Presets</span>
       <div id="presetList" style="display:flex;gap:6px;flex-wrap:wrap;flex:1;"></div>
+      <span id="presetToast" style="font-family:var(--font-mono);font-size:9px;font-weight:500;letter-spacing:0.04em;color:var(--champagne);opacity:0;transition:opacity 0.25s;white-space:nowrap;"></span>
       <button class="apply-mode-btn" id="editPresetsBtn" onclick="toggleEditPresets()" style="white-space:nowrap;display:none;">Edit</button>
       <button class="apply-mode-btn" onclick="savePreset()" style="white-space:nowrap;">Save Preset</button>
     </div>
@@ -1850,10 +1851,20 @@ function buildPresetData(name) {
   };
 }
 
+function showPresetToast(msg) {
+  var el = document.getElementById("presetToast");
+  el.textContent = msg;
+  el.style.opacity = "1";
+  clearTimeout(el._timer);
+  el._timer = setTimeout(function() { el.style.opacity = "0"; }, 1800);
+}
+
 function savePreset() {
+  var wasOverwrite = false;
   var name;
   if (state.activePreset) {
     name = state.activePreset;
+    wasOverwrite = true;
   } else {
     name = prompt("Preset name:");
     if (!name || !name.trim()) return;
@@ -1866,7 +1877,7 @@ function savePreset() {
   savePresets(presets);
   state.activePreset = name;
   renderPresets();
-  showSaveIndicator();
+  showPresetToast(wasOverwrite ? "Preset updated" : "Preset saved");
 }
 
 var _editingPresets = false;
@@ -1876,11 +1887,13 @@ function toggleEditPresets() {
   var btn = document.getElementById("editPresetsBtn");
   btn.textContent = _editingPresets ? "Done" : "Edit";
   if (_editingPresets) {
-    btn.style.background = "var(--champagne)";
+    btn.style.background = "var(--ivory)";
     btn.style.color = "var(--slate)";
+    btn.style.borderColor = "var(--champagne)";
   } else {
     btn.style.background = "";
     btn.style.color = "";
+    btn.style.borderColor = "";
   }
   renderPresets();
 }
