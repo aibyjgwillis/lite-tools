@@ -2,5 +2,7 @@
   "name": "lite-tools",
   "version": "1.0.0",
   "description": "Free collection of Claude Code tools.",
-  "author": "aibyjgwillis"
+  "author": {
+    "name": "aibyjgwillis"
+  }
 }
