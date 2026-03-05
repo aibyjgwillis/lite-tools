@@ -1551,11 +1551,8 @@ function getColorForFolder(folder, depth) {
 // Get the folder name for a given depth relative to base path
 function getLayerLabel(depth) {
   if (depth < 0) {
-    // Parent directories above the Apply To folder
-    // depth -1 = the Apply To folder itself (e.g. Desktop)
-    // depth -2 = parent of Apply To (e.g. ~ / JosephWillis)
     let parts = currentBasePath.split('/').filter(Boolean);
-    const idx = parts.length + depth; // -1 -> last part, -2 -> second to last
+    const idx = parts.length + depth;
     if (idx >= 0 && idx < parts.length) {
       const name = parts[idx];
       const homeName = homeDir.split('/').filter(Boolean).pop();
@@ -1563,22 +1560,10 @@ function getLayerLabel(depth) {
     }
     return '/';
   }
-  if (depth === 0 && currentBaseLabel === 'All Folders') {
-    return 'Desktop, Documents, ...';
-  }
-  if (depth === 0 && manualFolders.length > 0) {
-    return manualFolders[0].name;
-  }
-  if (depth === 0) return 'Top-level folders';
-  if (depth === 1) {
-    const expanded = manualFolders.find(f => f.subsLoaded && f.subs.length > 0);
-    if (expanded) return expanded.subs[0].name;
-    if (manualFolders.length > 0) return manualFolders[0].name + ' / ...';
-    return 'Subfolders';
-  }
-  if (depth === 2) return 'Sub-subfolders';
-  if (depth === 3) return 'Nested folders';
-  return 'Deeply nested';
+  if (depth === 0) return 'Level 1';
+  if (depth === 1) return 'Level 2';
+  if (depth === 2) return 'Level 3';
+  return 'Level ' + (depth + 1);
 }
 
 function getLayerSublabelForRow(depth) {
@@ -1596,10 +1581,10 @@ function getLayerSublabel(depth) {
     const levels = Math.abs(depth);
     return levels === 1 ? 'parent folder' : levels + ' levels up';
   }
-  if (depth === 0) return 'top-level';
-  if (depth === 1) return 'subfolders';
-  if (depth === 2) return 'sub-subfolders';
-  return 'depth ' + depth;
+  if (depth === 0) return 'top-level folders';
+  if (depth === 1) return 'folders inside those';
+  if (depth === 2) return 'one level deeper';
+  return (depth + 1) + ' levels deep';
 }
 
 let homeDir = '';
