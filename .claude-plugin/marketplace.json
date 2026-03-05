@@ -1,14 +1,14 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "aibyjgwillis",
-  "description": "Free collection of useful Claude Code tools",
+  "description": "Free collection of Claude Code tools",
   "owner": {
     "name": "aibyjgwillis"
   },
   "plugins": [
     {
       "name": "lite-tools",
-      "description": "Free collection of useful Claude Code tools including folder coloring, and more to come.",
+      "description": "Free collection of Claude Code tools.",
       "version": "1.0.0",
       "author": {
         "name": "aibyjgwillis"
