@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multiple Terminals</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0e1117;
+    --surface: #161b22;
+    --surface-2: #1c2128;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #2c5f80;
+    --accent-hover: #3a6a8c;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+  }
+
+  h1 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin-bottom: 32px;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 520px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .card-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+  }
+
+  .row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .row:last-child { margin-bottom: 0; }
+
+  .field {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+
+  select, input[type="number"], input[type="text"] {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    padding: 8px 10px;
+    outline: none;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+
+  select:focus, input:focus {
+    border-color: var(--accent);
+  }
+
+  select { cursor: pointer; }
+
+  .count-control {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+
+  .count-btn {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 34px;
+    height: 34px;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+  }
+
+  .count-btn:hover { background: var(--border); }
+  .count-btn:first-child { border-radius: 6px 0 0 6px; }
+  .count-btn:last-child { border-radius: 0 6px 6px 0; }
+
+  .count-display {
+    background: var(--surface-2);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    width: 44px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+  }
+
+  .toggle-row + .toggle-row {
+    border-top: 1px solid var(--border);
+  }
+
+  .toggle-label {
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  .toggle-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .toggle {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    flex-shrink: 0;
+  }
+
+  .toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    border-radius: 11px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .toggle-track::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+
+  .toggle input:checked + .toggle-track {
+    background: var(--accent);
+  }
+
+  .toggle input:checked + .toggle-track::after {
+    transform: translateX(18px);
+  }
+
+  /* Color mode swatches */
+  .mode-options {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .mode-swatch {
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    padding: 6px;
+    text-align: center;
+    transition: border-color 0.15s, background 0.15s;
+    background: var(--surface-2);
+  }
+
+  .mode-swatch:hover {
+    background: var(--border);
+  }
+
+  .mode-swatch.active {
+    border-color: var(--accent);
+  }
+
+  .swatch-colors {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 4px;
+    height: 16px;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .swatch-colors span {
+    flex: 1;
+  }
+
+  .mode-name {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: capitalize;
+  }
+
+  .mode-swatch.active .mode-name {
+    color: var(--text);
+  }
+
+  /* Layout preview */
+  .layout-options {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .layout-option {
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    padding: 10px 6px 6px;
+    text-align: center;
+    transition: border-color 0.15s, background 0.15s;
+    background: var(--surface-2);
+  }
+
+  .layout-option:hover { background: var(--border); }
+  .layout-option.active { border-color: var(--accent); }
+
+  .layout-preview {
+    width: 100%;
+    aspect-ratio: 16/10;
+    display: grid;
+    gap: 2px;
+    margin-bottom: 6px;
+  }
+
+  .layout-preview .cell {
+    background: var(--accent);
+    border-radius: 2px;
+    opacity: 0.6;
+  }
+
+  .layout-option.active .cell { opacity: 1; }
+
+  .layout-name {
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  .layout-option.active .layout-name { color: var(--text); }
+
+  /* Preview area */
+  .preview-area {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/10;
+    background: #0a0d12;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .preview-window {
+    position: absolute;
+    border-radius: 3px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+
+  .preview-titlebar {
+    height: 14%;
+    min-height: 4px;
+    background: rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    padding: 0 4px;
+    gap: 2px;
+  }
+
+  .preview-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+  }
+
+  .preview-body {
+    flex: 1;
+  }
+
+  /* Command output */
+  .command-output {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+    font-size: 12px;
+    color: var(--accent-hover);
+    word-break: break-all;
+    line-height: 1.5;
+    position: relative;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+
+  .command-output:hover { border-color: var(--accent); }
+
+  .copy-hint {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .command-output:hover .copy-hint { opacity: 1; }
+
+  .command-output.copied .copy-hint {
+    opacity: 1;
+    color: #3fb950;
+  }
+
+  .actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  .btn {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+
+  .btn:active { transform: scale(0.98); }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .btn-primary:hover { background: var(--accent-hover); }
+
+  .btn-secondary {
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover { background: var(--border); }
+</style>
+</head>
+<body>
+
+<h1>Multiple Terminals</h1>
+<p class="subtitle">Configure and launch color-coded terminal windows</p>
+
+<div class="container">
+
+  <!-- Layout -->
+  <div class="card">
+    <div class="card-title">Layout</div>
+    <div class="layout-options" id="layoutOptions">
+      <div class="layout-option active" data-layout="side-by-side">
+        <div class="layout-preview" style="grid-template-columns: 1fr 1fr 1fr;">
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+        </div>
+        <div class="layout-name">Side by Side</div>
+      </div>
+      <div class="layout-option" data-layout="grid">
+        <div class="layout-preview" style="grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;">
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+        </div>
+        <div class="layout-name">Grid</div>
+      </div>
+      <div class="layout-option" data-layout="rows">
+        <div class="layout-preview" style="grid-template-rows: 1fr 1fr 1fr;">
+          <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+        </div>
+        <div class="layout-name">Rows</div>
+      </div>
+      <div class="layout-option" data-layout="stacked">
+        <div class="layout-preview" style="grid-template-columns: 1fr;">
+          <div class="cell"></div>
+        </div>
+        <div class="layout-name">Stacked</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Color Mode -->
+  <div class="card">
+    <div class="card-title">Color Mode</div>
+    <div class="mode-options" id="modeOptions"></div>
+  </div>
+
+  <!-- Count + Settings -->
+  <div class="card">
+    <div class="card-title">Settings</div>
+    <div class="row">
+      <div class="field">
+        <label>Windows</label>
+        <div class="count-control">
+          <button class="count-btn" onclick="adjustCount(-1)">-</button>
+          <div class="count-display" id="countDisplay">3</div>
+          <button class="count-btn" onclick="adjustCount(1)">+</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Theme Override</label>
+        <select id="themeSelect">
+          <option value="">None (use color mode)</option>
+          <option>Basic</option>
+          <option>Pro</option>
+          <option>Homebrew</option>
+          <option>Ocean</option>
+          <option>Red Sands</option>
+          <option>Grass</option>
+          <option>Man Page</option>
+          <option>Novel</option>
+          <option>Silver Aerogel</option>
+          <option>Solid Colors</option>
+          <option>Clear Dark</option>
+          <option>Clear Light</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Commands (comma-separated)</label>
+        <input type="text" id="commandsInput" placeholder="e.g. claude,htop,git log">
+      </div>
+    </div>
+  </div>
+
+  <!-- Toggles -->
+  <div class="card">
+    <div class="card-title">Options</div>
+    <div class="toggle-row">
+      <div>
+        <div class="toggle-label">Restyle Existing</div>
+        <div class="toggle-desc">Rearrange current windows instead of opening new ones</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="toggleRestyle">
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+    <div class="toggle-row">
+      <div>
+        <div class="toggle-label">Include All Windows</div>
+        <div class="toggle-desc">Include browsers, editors, and other apps in the layout</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="toggleIncludeAll">
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+    <div class="toggle-row">
+      <div>
+        <div class="toggle-label">All New Windows</div>
+        <div class="toggle-desc">Open fresh windows instead of reusing the existing one</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="toggleAllNew">
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+    <div class="toggle-row">
+      <div>
+        <div class="toggle-label">Notify on Finish</div>
+        <div class="toggle-desc">Play a sound when a command completes</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="toggleNotify">
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+    <div class="toggle-row">
+      <div>
+        <div class="toggle-label">Skip Auto-Claude</div>
+        <div class="toggle-desc">Don't auto-run claude in each window</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="toggleNoClaude">
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Preview -->
+  <div class="card">
+    <div class="card-title">Preview</div>
+    <div class="preview-area" id="previewArea"></div>
+  </div>
+
+  <!-- Command -->
+  <div class="card">
+    <div class="card-title">Command</div>
+    <div class="command-output" id="commandOutput" onclick="copyCommand()">
+      <span class="copy-hint" id="copyHint">Click to copy</span>
+      <span id="commandText"></span>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="copyCommand()">Copy</button>
+      <button class="btn btn-primary" onclick="runCommand()">Run</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const COLOR_MODES = {
+  ocean:  ["#0a2437","#0d344c","#124460","#1d5474","#2c5f80","#3a6a8c"],
+  forest: ["#0a2414","#10351e","#1a442a","#245436","#306444","#3c7454"],
+  sunset: ["#3a140c","#541c10","#6a2818","#7a3520","#8a442c","#985438"],
+  berry:  ["#240a2a","#361440","#461e54","#582a68","#6a367c","#7c4290"],
+  earth:  ["#1e1410","#302418","#3e3020","#4c3c28","#5a4832","#68543c"],
+  mono:   ["#141414","#1e1e1e","#2a2a2a","#363636","#424242","#4e4e4e"],
+  warm:   ["#3a100a","#4e1810","#641e14","#7a2818","#8e3420","#a04028"],
+  cool:   ["#0a1438","#10204c","#182c60","#203a74","#2c4888","#38569c"],
+};
+
+const SCRIPT_PATH = "~/tools/plugins/lite-tools/skills/multiple-terminals/multiple-terminals.py";
+
+let state = {
+  layout: "side-by-side",
+  mode: "ocean",
+  count: 3,
+};
+
+function createEl(tag, className, textContent) {
+  const el = document.createElement(tag);
+  if (className) el.className = className;
+  if (textContent) el.textContent = textContent;
+  return el;
+}
+
+// Build color mode swatches
+function buildModeSwatches() {
+  const container = document.getElementById("modeOptions");
+  while (container.firstChild) container.removeChild(container.firstChild);
+
+  for (const [name, colors] of Object.entries(COLOR_MODES)) {
+    const div = createEl("div", "mode-swatch" + (name === state.mode ? " active" : ""));
+    div.dataset.mode = name;
+
+    const swatchRow = createEl("div", "swatch-colors");
+    colors.forEach(function(c) {
+      const span = createEl("span");
+      span.style.background = c;
+      swatchRow.appendChild(span);
+    });
+    div.appendChild(swatchRow);
+    div.appendChild(createEl("div", "mode-name", name));
+
+    div.addEventListener("click", function() {
+      state.mode = name;
+      document.querySelectorAll(".mode-swatch").forEach(function(s) { s.classList.remove("active"); });
+      div.classList.add("active");
+      update();
+    });
+    container.appendChild(div);
+  }
+}
+
+// Layout selection
+document.getElementById("layoutOptions").addEventListener("click", function(e) {
+  var opt = e.target.closest(".layout-option");
+  if (!opt) return;
+  state.layout = opt.dataset.layout;
+  document.querySelectorAll(".layout-option").forEach(function(o) { o.classList.remove("active"); });
+  opt.classList.add("active");
+  update();
+});
+
+// Count
+function adjustCount(delta) {
+  state.count = Math.max(1, Math.min(6, state.count + delta));
+  document.getElementById("countDisplay").textContent = state.count;
+  update();
+}
+
+// Build preview
+function updatePreview() {
+  var area = document.getElementById("previewArea");
+  while (area.firstChild) area.removeChild(area.firstChild);
+
+  var colors = COLOR_MODES[state.mode];
+  var count = state.count;
+  var rects = calculateLayout(count, state.layout);
+
+  rects.forEach(function(rect, i) {
+    var win = createEl("div", "preview-window");
+    var bg = colors[i % colors.length];
+    win.style.left = (rect[0] * 100) + "%";
+    win.style.top = (rect[1] * 100) + "%";
+    win.style.width = ((rect[2] - rect[0]) * 100) + "%";
+    win.style.height = ((rect[3] - rect[1]) * 100) + "%";
+    win.style.background = bg;
+
+    var titlebar = createEl("div", "preview-titlebar");
+    titlebar.appendChild(createEl("div", "preview-dot"));
+    titlebar.appendChild(createEl("div", "preview-dot"));
+    titlebar.appendChild(createEl("div", "preview-dot"));
+    win.appendChild(titlebar);
+    win.appendChild(createEl("div", "preview-body"));
+    area.appendChild(win);
+  });
+}
+
+function calculateLayout(count, layout) {
+  var gap = 0.02;
+  var rowGap = 0.03;
+  var rects = [];
+
+  if (layout === "side-by-side") {
+    var w = (1 - gap * (count + 1)) / count;
+    for (var i = 0; i < count; i++) {
+      var l = gap + i * (w + gap);
+      rects.push([l, gap, l + w, 1 - gap]);
+    }
+  } else if (layout === "grid") {
+    var cols = Math.ceil(Math.sqrt(count));
+    var rows = Math.ceil(count / cols);
+    var cw = (1 - gap * (cols + 1)) / cols;
+    var totalRowGap = rowGap * (rows - 1);
+    var rh = (1 - gap * 2 - totalRowGap) / rows;
+    for (var i = 0; i < count; i++) {
+      var row = Math.floor(i / cols);
+      var col = i % cols;
+      var l = gap + col * (cw + gap);
+      var t = gap + row * (rh + rowGap);
+      rects.push([l, t, l + cw, t + rh]);
+    }
+  } else if (layout === "rows") {
+    var totalRowGap = rowGap * (count - 1);
+    var h = (1 - gap * 2 - totalRowGap) / count;
+    for (var i = 0; i < count; i++) {
+      var t = gap + i * (h + rowGap);
+      rects.push([gap, t, 1 - gap, t + h]);
+    }
+  } else if (layout === "stacked") {
+    for (var i = 0; i < count; i++) {
+      rects.push([gap, gap, 1 - gap, 1 - gap]);
+    }
+  }
+  return rects;
+}
+
+// Build command string
+function buildCommand() {
+  var parts = ["python3", SCRIPT_PATH];
+  parts.push("--count", state.count);
+  parts.push("--layout", state.layout);
+
+  var theme = document.getElementById("themeSelect").value;
+  if (theme) {
+    parts.push("--theme", '"' + theme + '"');
+  } else {
+    parts.push("--mode", state.mode);
+  }
+
+  var cmds = document.getElementById("commandsInput").value.trim();
+  if (cmds) parts.push("--commands", '"' + cmds + '"');
+
+  if (document.getElementById("toggleRestyle").checked) parts.push("--restyle");
+  if (document.getElementById("toggleIncludeAll").checked) parts.push("--include-all");
+  if (document.getElementById("toggleAllNew").checked) parts.push("--all-new");
+  if (document.getElementById("toggleNotify").checked) parts.push("--notify");
+  if (document.getElementById("toggleNoClaude").checked) parts.push("--no-claude");
+
+  return parts.join(" ");
+}
+
+function updateCommand() {
+  document.getElementById("commandText").textContent = buildCommand();
+}
+
+function copyCommand() {
+  var cmd = buildCommand();
+  navigator.clipboard.writeText(cmd).then(function() {
+    var el = document.getElementById("commandOutput");
+    var hint = document.getElementById("copyHint");
+    el.classList.add("copied");
+    hint.textContent = "Copied";
+    setTimeout(function() {
+      el.classList.remove("copied");
+      hint.textContent = "Click to copy";
+    }, 1500);
+  });
+}
+
+function runCommand() {
+  var cmd = buildCommand();
+  navigator.clipboard.writeText(cmd).then(function() {
+    var btn = document.querySelector(".btn-primary");
+    btn.textContent = "Copied. Paste into Terminal.";
+    setTimeout(function() { btn.textContent = "Run"; }, 2000);
+  });
+}
+
+function update() {
+  updatePreview();
+  updateCommand();
+}
+
+// Listen to all inputs
+document.querySelectorAll("input, select").forEach(function(el) {
+  el.addEventListener("change", update);
+  el.addEventListener("input", update);
+});
+
+// Init
+buildModeSwatches();
+update();
+</script>
+</body>
+</html>
