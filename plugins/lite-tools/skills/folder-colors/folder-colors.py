@@ -844,6 +844,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             since = int(params.get("since", ["0"])[0])
             if _pending_layers and _pending_layers["version"] > since:
                 self._json(_pending_layers)
+                _pending_layers = None  # Clear after UI consumes it
             else:
                 self._json({"version": _layers_version})
         elif parsed.path == "/api/heartbeat":
@@ -2632,7 +2633,8 @@ async function applyManual() {
   const btn = el('applyBtn'); btn.disabled = true; txt(btn, 'Applying...');
   const opacity = getOpacity();
   let ok = 0, fail = 0;
-  showProgress('manual', 0, 0);
+  const totalEstimate = _lastFolderCount || selected.length;
+  showProgress('manual', 0, totalEstimate);
 
   // Check if any layer colors are set for depths > 0
   const hasDeepLayers = Object.keys(layerColors).some(d => parseInt(d) > 0 && layerEnabled[parseInt(d)]);
@@ -2649,7 +2651,7 @@ async function applyManual() {
         if (data.ok) ok++; else fail++;
       } catch(e) { fail++; }
     }
-    showProgress('manual', ok, 0);
+    showProgress('manual', ok, totalEstimate);
 
     // Apply layer colors to subfolders via the batch endpoint
     if (hasDeepLayers) {
@@ -2668,7 +2670,7 @@ async function applyManual() {
           });
           const data = await res.json();
           if (data.ok) ok += data.applied || 0;
-          showProgress('manual', ok, 0);
+          showProgress('manual', ok, totalEstimate);
         } catch(e) { fail++; }
       }
     }
@@ -2684,7 +2686,7 @@ async function applyManual() {
           });
           const data = await res.json();
           if (data.ok) ok++; else fail++;
-          showProgress('manual', ok, 0);
+          showProgress('manual', ok, totalEstimate);
         } catch(e) { fail++; }
       }
       // Reset unchecked subs that the batch may have colored
