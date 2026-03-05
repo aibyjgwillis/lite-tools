@@ -2592,9 +2592,15 @@ function updateFolderCount() {
   // Header always shows top-level count
   txt(el('manualListTitle'), label + ' (' + checkedCount + ')');
 
-  // If no deeper levels enabled, total = top-level count
+  // Count parent levels (negative depths): each is 1 folder
+  let parentCount = 0;
+  for (let d = layerStartDepth; d < 0; d++) {
+    if (layerEnabled[d]) parentCount++;
+  }
+
+  // If no deeper levels enabled, total = parents + top-level count
   if (maxDepth === 0) {
-    _lastFolderCount = depth0Enabled ? checkedCount : 0;
+    _lastFolderCount = parentCount + (depth0Enabled ? checkedCount : 0);
     if (!depth0Enabled) txt(el('manualListTitle'), label + ' (0 selected)');
     totalEl.style.display = 'block';
     txt(totalEl, 'Total folders selected: ' + _lastFolderCount.toLocaleString());
@@ -2625,7 +2631,7 @@ function updateFolderCount() {
         }
       }
     }
-    const total = (depth0Enabled ? checkedCount : 0) + subTotal;
+    const total = parentCount + (depth0Enabled ? checkedCount : 0) + subTotal;
     _lastFolderCount = total;
     txt(totalEl, 'Total folders selected: ' + total.toLocaleString());
     if (total > 1000) {
