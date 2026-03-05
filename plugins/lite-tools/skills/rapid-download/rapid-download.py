@@ -257,11 +257,6 @@ body {
 }
 /* ==/THEME:PAGE_TITLE== */
 
-.review-title {
-  font-family: var(--font-drama); font-size: 42px;
-  font-style: italic; font-weight: 400;
-  margin-bottom: 6px; text-align: center;
-}
 .review-subtitle {
   font-family: var(--font-mono); font-size: 12px;
   color: var(--champagne); text-align: center; margin-bottom: 32px;
@@ -472,16 +467,19 @@ body {
   <span class="topbar-pill">rapid-download</span>
 </div>
 
-<div class="path-bar">
-  <label>Save to</label>
-  <input id="output-input" type="text" spellcheck="false">
-  <button onclick="browseFolder()">Browse...</button>
-  <span class="path-status" id="path-status"></span>
-</div>
-
 <!-- REVIEW SCREEN -->
 <div class="screen fade-in" id="review-screen">
-  <div class="review-title">Review Items</div>
+  <div class="page-title">Rapid Download</div>
+  <p class="page-subtitle">Batch download images by name with a visual picker.</p>
+
+  <div class="path-bar">
+    <label>Save to</label>
+    <input id="output-input" type="text" spellcheck="false">
+    <button onclick="browseFolder()">Browse...</button>
+    <span class="path-status" id="path-status"></span>
+  </div>
+
+  <div class="section-label" style="margin-top:28px;">Review Items</div>
   <div class="review-subtitle" id="review-count"></div>
   <div class="edit-list" id="edit-list"></div>
   <div class="add-area">

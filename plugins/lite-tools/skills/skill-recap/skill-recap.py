@@ -2,7 +2,7 @@
 """Skill Recap - Visual summary of what a skill just did.
 
 Run: python3 skill-recap.py
-Opens a browser-based UI on localhost:9848.
+Opens a browser-based UI on localhost:9850.
 
 NOTE: This is a local-only tool. All HTML rendering uses data POSTed
 from the local Claude Code process. No external/untrusted input is processed.
@@ -23,7 +23,7 @@ PORT = 9850
 
 # Heartbeat: track last ping from browser, auto-shutdown when tab closes
 _last_heartbeat = _time.time()
-_heartbeat_timeout = 10  # seconds without a ping before shutdown
+_heartbeat_timeout = 120  # seconds without a ping before shutdown (background tabs throttle timers)
 
 # Store the most recent recap data
 _recap_data = None
@@ -573,7 +573,11 @@ body {
   <div class="viewer-body"><pre id="viewerContent"></pre></div>
 </div>
 
-<div class="main" id="content"></div>
+<div class="main">
+  <div class="page-title">Skill Recap</div>
+  <p class="page-subtitle">Visual summary of the last skill execution.</p>
+  <div id="content"></div>
+</div>
 <button class="copy-btn" id="copyBtn" style="display:none; position:fixed; bottom:14px; left:24px;">Copy JSON</button>
 <!-- ==THEME:FOOTER_HTML== -->
 <div class="footer">
@@ -648,9 +652,8 @@ function renderLoading() {
   const c = document.getElementById('content');
   c.textContent = '';
   const wrap = el('div', 'empty-state');
-  wrap.appendChild(el('div', 'empty-title', 'Loading recap...'));
   const sub = el('div', 'empty-text');
-  sub.textContent = 'Waiting for skill data.';
+  sub.textContent = 'Waiting for skill data...';
   wrap.appendChild(sub);
   c.appendChild(wrap);
 }
@@ -663,7 +666,6 @@ function renderEmpty() {
   const c = document.getElementById('content');
   c.textContent = '';
   const wrap = el('div', 'empty-state');
-  wrap.appendChild(el('div', 'empty-title', 'No recap data yet'));
   const sub = el('div', 'empty-text');
   sub.textContent = 'Run a skill, then use /skill-recap to see a visual summary of what happened.';
   wrap.appendChild(sub);
@@ -729,9 +731,7 @@ function renderRecap(d) {
   const c = document.getElementById('content');
   c.textContent = '';
 
-  // Title
-  c.appendChild(el('div', 'page-title', d.skill_name));
-  c.appendChild(el('p', 'page-subtitle', 'skill execution recap'));
+  // No title here - it's static in the HTML above
 
   // Status + timestamp + duration row
   const statusWrap = el('div', '');
@@ -963,6 +963,7 @@ document.getElementById('editSkillBtn').addEventListener('click', function() {
 
 // Heartbeat
 setInterval(() => { fetch('/api/heartbeat').catch(() => {}); }, 4000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) fetch('/api/heartbeat').catch(() => {}); });
 </script>
 </body>
 </html>"""
