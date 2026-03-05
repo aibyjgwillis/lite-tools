@@ -71,7 +71,7 @@ You are not limited to these. Use any short verb that fits. The UI will auto-for
 ## Step 2: Start the Server
 
 ```bash
-lsof -ti:9848 | xargs kill 2>/dev/null; sleep 0.5; python3 ${CLAUDE_PLUGIN_ROOT}/skills/skill-recap/skill-recap.py
+lsof -ti:9850 | xargs kill 2>/dev/null; sleep 0.5; python3 ${CLAUDE_PLUGIN_ROOT}/skills/skill-recap/skill-recap.py
 ```
 
 Run this in the background.
@@ -81,10 +81,10 @@ Run this in the background.
 Wait 2 seconds for the server to start, then POST your JSON:
 
 ```bash
-curl -s -X POST http://localhost:9848/api/recap -H "Content-Type: application/json" -d 'YOUR_JSON_HERE'
+curl -s -X POST http://localhost:9850/api/recap -H "Content-Type: application/json" -d 'YOUR_JSON_HERE'
 ```
 
-Tell the user the recap is open at http://localhost:9848. The server stops automatically when the browser tab is closed.
+Tell the user the recap is open at http://localhost:9850. The server stops automatically when the browser tab is closed.
 
 ## Auto-trigger via hookify (optional)
 

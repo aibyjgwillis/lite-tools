@@ -19,7 +19,7 @@ import webbrowser
 import time as _time
 
 VERSION = "1.2"
-PORT = 9848
+PORT = 9850
 
 # Heartbeat: track last ping from browser, auto-shutdown when tab closes
 _last_heartbeat = _time.time()
@@ -556,11 +556,11 @@ body {
 <!-- ==/THEME:NOISE_HTML== -->
 
 <div class="topbar">
-  <div class="topbar-brand">Skill Recap</div>
+  <span class="topbar-brand">LITE TOOLS</span>
   <div class="topbar-right">
     <button class="topbar-btn" id="viewSkillBtn" style="display:none;">View Skill</button>
     <button class="topbar-btn" id="editSkillBtn" style="display:none;">Edit Skill</button>
-    <div class="topbar-pill" id="skillPill">...</div>
+    <span class="topbar-pill">skill-recap</span>
   </div>
 </div>
 

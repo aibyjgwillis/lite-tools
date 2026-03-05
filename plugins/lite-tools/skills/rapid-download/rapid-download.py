@@ -467,8 +467,9 @@ body {
 <!-- ==/THEME:NOISE_HTML== -->
 
 <div class="topbar">
-  <div class="topbar-brand">Rapid Download</div>
+  <span class="topbar-brand">LITE TOOLS</span>
   <div class="topbar-progress" id="progress"></div>
+  <span class="topbar-pill">rapid-download</span>
 </div>
 
 <div class="path-bar">
