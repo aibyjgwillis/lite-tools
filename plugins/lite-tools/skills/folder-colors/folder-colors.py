@@ -2613,7 +2613,7 @@ function updateFolderCount() {
     clearTimeout(countingTimer);
     if (signal.aborted) return;
     const subTotal = counts.reduce((sum, c) => sum + (c.count || 0), 0);
-    const total = checkedCount + subTotal;
+    const total = (depth0Enabled ? checkedCount : 0) + subTotal;
     _lastFolderCount = total;
     txt(totalEl, 'Total folders selected: ' + total.toLocaleString());
     if (total > 1000) {
