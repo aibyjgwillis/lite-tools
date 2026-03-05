@@ -622,14 +622,25 @@
 
   /* Save indicator */
   .save-indicator {
+    position: fixed;
+    top: 16px;
+    right: 24px;
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     color: var(--green);
+    background: var(--green-bg);
+    padding: 5px 12px;
+    border-radius: 6px;
     opacity: 0;
-    transition: opacity 0.3s;
-    margin-left: auto;
+    transform: translateY(-8px);
+    transition: opacity 0.25s, transform 0.25s;
+    pointer-events: none;
+    z-index: 100;
   }
-  .save-indicator.visible { opacity: 1; }
+  .save-indicator.visible { opacity: 1; transform: translateY(0); }
 
 </style>
 </head>
@@ -700,9 +711,9 @@
         </button>
         <span class="no-server-msg" id="noServerMsg" style="display:none;">Use /multiple-terminals configure for live detection</span>
       </div>
-      <span class="save-indicator" id="saveIndicator" style="margin-left:auto;">Saved</span>
     </div>
   </div>
+  <div class="save-indicator" id="saveIndicator">Saved</div>
 
   <!-- Presets -->
   <div class="card">
