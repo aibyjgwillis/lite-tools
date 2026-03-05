@@ -13,7 +13,7 @@
       "author": {
         "name": "aibyjgwillis"
       },
-      "source": ".",
+      "source": "./plugins/tools",
       "category": "productivity"
     }
   ]
