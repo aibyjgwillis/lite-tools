@@ -8,8 +8,8 @@
   "plugins": [
     {
       "name": "tools",
-      "description": "Free collection of Claude Code tools. Includes: Folder Colors, Multiple Terminals, Rapid Download, Skill Recap.",
-      "version": "1.3.0",
+      "description": "Free collection of Claude Code tools. Includes: Folder Colors, Multiple Terminals, Rapid Download, Skill Recap, Glassmorphism BG.",
+      "version": "1.4.0",
       "author": {
         "name": "aibyjgwillis"
       },
