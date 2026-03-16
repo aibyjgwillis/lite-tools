@@ -395,29 +395,83 @@ def text_color_for_bg(hex_color):
         return (5140, 5140, 5654)  # ~141416
 
 
-def get_screen_bounds():
-    """Get usable screen bounds, detecting dock/menu bar auto-hide."""
+def get_screen_bounds(screen_index=-1):
+    """Get usable screen bounds for the active display.
+
+    Uses detect_screen.py (NSScreen + mouse position) to find the correct
+    display, handling multi-monitor setups. Falls back to Finder desktop
+    bounds if PyObjC is unavailable.
+
+    Args:
+        screen_index: Force a specific display index (0-based). -1 = auto-detect.
+    """
     screen_bounds = None
-    try:
-        result = subprocess.run(
-            ["osascript", "-e",
-             'tell application "Finder" to get bounds of window of desktop'],
-            capture_output=True, text=True, timeout=5
-        )
-        if result.returncode == 0:
-            parts = result.stdout.strip().split(", ")
-            if len(parts) == 4:
-                screen_bounds = tuple(int(p) for p in parts)
-    except Exception:
-        pass
+    screen_bounds_from_nsscreen = False
+
+    detect_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "detect_screen.py")
+
+    # Try NSScreen + mouse position to detect the active display.
+    # Attempt system Python first (always has PyObjC), then fall back to user python3.
+    pythons = ["/usr/bin/python3", "python3"]
+    for python_cmd in pythons:
+        if screen_bounds_from_nsscreen:
+            break
+        try:
+            cmd = [python_cmd, detect_script]
+            if screen_index >= 0:
+                cmd += ["--screen", str(screen_index)]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                # Filter out debug lines (start with #)
+                output_lines = [l for l in result.stdout.strip().splitlines()
+                                if not l.startswith("#")]
+                if output_lines:
+                    parts = output_lines[-1].strip().split(", ")
+                    if len(parts) == 4:
+                        bounds = tuple(int(p) for p in parts)
+                        w = bounds[2] - bounds[0]
+                        h = bounds[3] - bounds[1]
+                        # Sanity: reject nonsensical bounds
+                        if 100 < w <= 10000 and 100 < h <= 10000:
+                            screen_bounds = bounds
+                            screen_bounds_from_nsscreen = True
+        except Exception:
+            pass
+
+    # Fallback: Finder desktop bounds (may span multiple displays)
+    if not screen_bounds:
+        try:
+            result = subprocess.run(
+                ["osascript", "-e",
+                 'tell application "Finder" to get bounds of window of desktop'],
+                capture_output=True, text=True, timeout=5
+            )
+            if result.returncode == 0:
+                parts = result.stdout.strip().split(", ")
+                if len(parts) == 4:
+                    bounds = tuple(int(p) for p in parts)
+                    w = bounds[2] - bounds[0]
+                    # If Finder bounds span multiple displays (width > 3840),
+                    # clamp to a single-display assumption
+                    if w > 3840:
+                        bounds = (bounds[0], bounds[1],
+                                  bounds[0] + 2560, bounds[3])
+                    screen_bounds = bounds
+        except Exception:
+            pass
 
     if not screen_bounds:
         screen_bounds = (0, 0, 1440, 900)
 
     left, top, right, bottom = screen_bounds
 
-    # Terminal.app clamps its minimum y to ~32 (title bar), so always reserve
-    # at least 32px from the top regardless of menu bar auto-hide.
+    # If bounds came from detect_screen.py (NSScreen.visibleFrame), dock and
+    # menu bar are already excluded. Only apply manual offsets for the Finder
+    # fallback path, which returns raw full-screen bounds.
+    if screen_bounds_from_nsscreen:
+        return (left, top, right, bottom)
+
+    # Fallback path: manual dock/menu bar offset
     menu_offset = 32
     dock_offset = 0
     try:
@@ -870,6 +924,8 @@ def main():
                         help="Load a named preset from saved config")
     parser.add_argument("--list-presets", action="store_true",
                         help="List available named presets and exit")
+    parser.add_argument("--screen", type=int, default=-1,
+                        help="Force a specific display index (0-based) for window placement")
     args = parser.parse_args()
 
     # List presets
@@ -1018,7 +1074,7 @@ def main():
             cmd = f'{cmd}; afplay {sound} &'
         commands.append(cmd)
 
-    bounds = get_screen_bounds()
+    bounds = get_screen_bounds(screen_index=args.screen)
 
     # Restyle mode: apply layout/colors to existing windows
     if args.restyle:

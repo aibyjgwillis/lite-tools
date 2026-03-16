@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Background watcher that highlights Terminal windows when Claude is waiting for input.
+"""Background watcher that tints Terminal windows when Claude is waiting for input.
 
-Polls terminal contents every 2 seconds. When a window shows Claude's idle prompt,
-changes its background to a highlight color. Restores original color when active.
+Polls terminal titles every 2 seconds. When a window shows Claude's idle prompt,
+shifts its background color toward teal. Restores the original color when active.
 
-Usage: python3 watcher.py --colors "#0a0e1a,#111633,#1a1040" --highlight "#1a3a5a"
+The tint is relative to each window's original background, so text contrast is
+preserved (the shift is small enough that all existing ANSI colors remain readable).
+
+Usage: python3 watcher.py --colors "#0a0e1a,#111633,#1a1040"
        (launched automatically by multiple-terminals.py --notify)
-
-Pass original colors so they can be restored. Runs until all tracked windows close.
 """
 
 import argparse
@@ -18,12 +19,13 @@ import subprocess
 import sys
 import time
 
-# PID file so we can stop previous watchers
 PID_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".watcher.pid")
 
-# Default highlight color (muted teal-blue glow)
 DEFAULT_HIGHLIGHT = "#1a4a5a"
 CONFIG_PATH = os.path.expanduser("~/.config/lite-tools/multiple-terminals.json")
+
+# How much to shift each channel toward the tint color (0.0 = no change, 1.0 = full tint)
+TINT_STRENGTH = 0.25
 
 
 def read_config():
@@ -56,11 +58,45 @@ def get_sound_settings_from_config(default_name, default_volume):
     return name, max(0.0, min(1.0, volume))
 
 
+def hex_to_rgb(hex_color):
+    """Convert hex to (r, g, b) in 0-255 range."""
+    h = hex_color.lstrip("#")
+    return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+
+
+def tint_color(original_hex, tint_hex, strength=TINT_STRENGTH):
+    """Blend original color toward tint color by strength amount.
+
+    A strength of 0.25 means 75% original + 25% tint. This keeps the
+    background close enough to the original that all ANSI text colors
+    remain readable, while making the shift visible.
+    """
+    or_, og, ob = hex_to_rgb(original_hex)
+    tr, tg, tb = hex_to_rgb(tint_hex)
+    r = int(or_ * (1 - strength) + tr * strength)
+    g = int(og * (1 - strength) + tg * strength)
+    b = int(ob * (1 - strength) + tb * strength)
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
 def hex_to_terminal_rgb(hex_color):
     """Convert hex to Terminal.app 16-bit RGB."""
-    h = hex_color.lstrip("#")
-    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    r, g, b = hex_to_rgb(hex_color)
     return (r * 257, g * 257, b * 257)
+
+
+def set_window_background(window_index, hex_color):
+    """Set background color of a Terminal window."""
+    r, g, b = hex_to_terminal_rgb(hex_color)
+    try:
+        subprocess.run(
+            ["osascript", "-e",
+             f'tell application "Terminal" to set background color of selected tab '
+             f'of window {window_index} to {{{r}, {g}, {b}}}'],
+            capture_output=True, text=True, timeout=5
+        )
+    except Exception:
+        pass
 
 
 def get_window_count():
@@ -93,33 +129,11 @@ def get_window_title(window_index):
     return ""
 
 
-def set_window_background(window_index, hex_color):
-    """Set background color of a Terminal window."""
-    r, g, b = hex_to_terminal_rgb(hex_color)
-    try:
-        subprocess.run(
-            ["osascript", "-e",
-             f'tell application "Terminal" to set background color of selected tab '
-             f'of window {window_index} to {{{r}, {g}, {b}}}'],
-            capture_output=True, text=True, timeout=5
-        )
-    except Exception:
-        pass
-
-
 def is_idle(title):
-    """Check if a Terminal window title indicates Claude is waiting for input.
-
-    Claude Code sets window title status indicators:
-      ✳ (eight-spoked asterisk) = idle / waiting for input
-      Braille spinner chars (⠂⠈⠐⠠ etc.) = actively working
-    """
+    """Check if a Terminal window title indicates Claude is waiting for input."""
     if not title:
         return False
-    # Idle when the title contains the idle marker
-    if "\u2733" in title:  # ✳
-        return True
-    return False
+    return "\u2733" in title
 
 
 def play_sound(sound_name="Submarine", volume=0.2):
@@ -171,7 +185,7 @@ def main():
     parser.add_argument("--colors", type=str, required=True,
                         help="Comma-separated original hex colors for each window")
     parser.add_argument("--highlight", type=str, default=DEFAULT_HIGHLIGHT,
-                        help=f"Highlight color when idle (default: {DEFAULT_HIGHLIGHT})")
+                        help=f"Tint target color (default: {DEFAULT_HIGHLIGHT})")
     parser.add_argument("--sound", action="store_true", default=False,
                         help="Play a sound when a window becomes idle")
     parser.add_argument("--sound-name", type=str, default="Submarine",
@@ -188,34 +202,37 @@ def main():
     signal.signal(signal.SIGINT, cleanup)
 
     original_colors = [c.strip().strip('"').strip("'") for c in args.colors.split(",")]
-    highlight = get_highlight_from_config(args.highlight)
+    tint_target = get_highlight_from_config(args.highlight)
     sound_name, sound_volume = get_sound_settings_from_config(args.sound_name, args.sound_volume)
     tracked_count = args.window_count if args.window_count > 0 else len(original_colors)
 
-    # Track which windows are currently highlighted
+    # Pre-compute tinted colors for each window
+    tinted_colors = []
+    for color in original_colors:
+        tinted_colors.append(tint_color(color, tint_target))
+
     highlighted = set()
-    # Track which windows have already played their sound (reset only on genuine activity)
     sound_played = set()
-    # Debounce: count consecutive polls in the same state before acting
-    idle_streak = {}    # window_idx -> consecutive idle polls
-    active_streak = {}  # window_idx -> consecutive active polls
-    IDLE_THRESHOLD = 1    # highlight immediately on first idle detection
-    ACTIVE_THRESHOLD = 1  # restore immediately when active
+    idle_streak = {}
+    active_streak = {}
+    IDLE_THRESHOLD = 1
+    ACTIVE_THRESHOLD = 1
     poll_interval = 2.0
     empty_polls = 0
     config_check_counter = 0
 
     while True:
         try:
-            # Re-read highlight color from config every 5 polls (~10s)
             config_check_counter += 1
             if config_check_counter >= 5:
                 config_check_counter = 0
-                new_highlight = get_highlight_from_config(args.highlight)
-                if new_highlight != highlight:
-                    highlight = new_highlight
+                new_target = get_highlight_from_config(args.highlight)
+                if new_target != tint_target:
+                    tint_target = new_target
+                    tinted_colors = [tint_color(c, tint_target) for c in original_colors]
                     for w in list(highlighted):
-                        set_window_background(w, highlight)
+                        ci = (w - 1) % len(tinted_colors)
+                        set_window_background(w, tinted_colors[ci])
                 sound_name, sound_volume = get_sound_settings_from_config(args.sound_name, args.sound_volume)
 
             current_count = get_window_count()
@@ -241,16 +258,17 @@ def main():
                     active_streak[window_idx] = active_streak.get(window_idx, 0) + 1
                     idle_streak[window_idx] = 0
 
+                color_idx = i % len(original_colors)
+
                 if idle and window_idx not in highlighted:
                     if idle_streak.get(window_idx, 0) >= IDLE_THRESHOLD:
-                        set_window_background(window_idx, highlight)
+                        set_window_background(window_idx, tinted_colors[color_idx])
                         highlighted.add(window_idx)
                         if args.sound and window_idx not in sound_played:
                             play_sound(sound_name, sound_volume)
                             sound_played.add(window_idx)
                 elif not idle and window_idx in highlighted:
                     if active_streak.get(window_idx, 0) >= ACTIVE_THRESHOLD:
-                        color_idx = i % len(original_colors)
                         set_window_background(window_idx, original_colors[color_idx])
                         highlighted.discard(window_idx)
                         sound_played.discard(window_idx)

@@ -673,6 +673,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(content.encode())
 
     def do_GET(self):
+        global _pending_layers
         parsed = urlparse(self.path)
         if parsed.path == "/":
             self._html(HTML)
@@ -1280,12 +1281,12 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 10px; }
 
 /* ==THEME:FOOTER_CSS== */
 .footer {
-  position: fixed; bottom: 0; left: 0; right: 0;
-  display: flex; align-items: center; justify-content: center;
-  padding: 14px 24px;
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+  padding: 10px 24px; min-height: 44px;
   font-family: var(--font-mono); font-size: 10px; color: rgba(28,28,30,0.3);
   background: linear-gradient(transparent, var(--ivory) 40%);
-  gap: 14px;
+  gap: 10px 14px;
 }
 .footer a { color: var(--champagne); text-decoration: none; }
 .footer a:hover { color: var(--slate); }
@@ -1294,38 +1295,52 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 10px; }
 .footer-socials a { display: flex; align-items: center; }
 .footer-socials svg { width: 13px; height: 13px; fill: var(--champagne); opacity: 0.6; transition: opacity 0.2s; }
 .footer-socials a:hover svg { opacity: 1; }
-.footer-waitlist { position: relative; }
-.footer-waitlist-btn {
+.footer-popup-wrap { position: relative; }
+.footer-popup-btn {
   font-family: var(--font-mono); font-size: 10px; font-weight: 500;
   background: var(--slate); color: var(--ivory); border: none; border-radius: 2rem;
   padding: 5px 12px; cursor: pointer; transition: all 0.2s; letter-spacing: 0.02em;
 }
-.footer-waitlist-btn:hover { background: var(--obsidian); }
-.footer-waitlist-form {
-  position: absolute; bottom: 32px; right: 0; background: white;
-  border: 1px solid rgba(28,28,30,0.1); border-radius: 10px; padding: 14px;
-  display: none; flex-direction: column; gap: 8px; min-width: 240px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+.footer-popup-btn:hover { background: var(--obsidian); }
+.footer-popup-btn.outline {
+  background: none; color: var(--champagne); border: 1px solid rgba(28,28,30,0.15);
 }
-.footer-waitlist-form.open { display: flex; }
-.footer-waitlist-form label {
+.footer-popup-btn.outline:hover { border-color: var(--slate); color: var(--slate); }
+.footer-popup {
+  position: absolute; bottom: 36px; left: 50%; transform: translateX(-50%);
+  background: var(--ivory);
+  border: 1px solid rgba(28,28,30,0.1); border-radius: 14px; padding: 20px;
+  display: none; flex-direction: column; gap: 12px; min-width: 280px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+  animation: popupFadeIn 0.15s ease-out;
+}
+.footer-popup.open { display: flex; }
+@keyframes popupFadeIn { from { opacity: 0; transform: translateX(-50%) translateY(6px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+.footer-popup label {
   font-family: var(--font-mono); font-size: 10px; font-weight: 600;
   text-transform: uppercase; letter-spacing: 0.1em; color: var(--champagne);
 }
-.footer-waitlist-form input {
-  font-family: var(--font-heading); font-size: 13px; padding: 8px 12px;
-  border: 1px solid rgba(28,28,30,0.12); border-radius: 6px; outline: none;
-  transition: border-color 0.2s; color: var(--slate); background: var(--ivory);
+.footer-popup p {
+  font-family: var(--font-heading); font-size: 12px; color: rgba(28,28,30,0.5);
+  line-height: 1.5;
 }
-.footer-waitlist-form input:focus { border-color: var(--champagne); }
-.footer-waitlist-form .footer-waitlist-submit {
+.footer-popup input, .footer-popup textarea {
+  font-family: var(--font-heading); font-size: 13px; padding: 10px 14px;
+  border: 1px solid rgba(28,28,30,0.1); border-radius: 8px; outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s; color: var(--slate); background: white;
+}
+.footer-popup input:focus, .footer-popup textarea:focus {
+  border-color: var(--champagne); box-shadow: 0 0 0 3px rgba(90,125,150,0.1);
+}
+.footer-popup textarea { resize: vertical; min-height: 60px; }
+.footer-popup-submit {
   font-family: var(--font-heading); font-size: 12px; font-weight: 600;
-  background: var(--slate); color: var(--ivory); border: none; border-radius: 6px;
-  padding: 8px; cursor: pointer; transition: all 0.2s;
+  background: var(--slate); color: var(--ivory); border: none; border-radius: 8px;
+  padding: 10px; cursor: pointer; transition: all 0.2s;
 }
-.footer-waitlist-form .footer-waitlist-submit:hover { background: var(--obsidian); }
-.footer-waitlist-msg {
-  font-family: var(--font-mono); font-size: 10px; color: var(--green);
+.footer-popup-submit:hover { background: var(--obsidian); }
+.footer-popup-msg {
+  font-family: var(--font-mono); font-size: 10px; text-align: center;
 }
 /* ==/THEME:FOOTER_CSS== */
 .empty-msg { padding: 24px; text-align: center; color: rgba(28,28,30,0.35); font-size: 13px; }
@@ -1609,13 +1624,26 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 10px; }
     </a>
   </div>
   <span class="footer-sep">|</span>
-  <div class="footer-waitlist">
-    <button class="footer-waitlist-btn" onclick="this.nextElementSibling.classList.toggle('open')">Join Pro Tools Waitlist</button>
-    <div class="footer-waitlist-form">
+  <div class="footer-popup-wrap">
+    <button class="footer-popup-btn outline" onclick="toggleFooterPopup(this, 'plugin-submit')">Submit a Plugin Idea</button>
+    <div class="footer-popup align-left" data-popup="plugin-submit">
+      <label>Plugin idea</label>
+      <p>Have an idea for a Claude Code plugin? Describe what it would do and we might build it.</p>
+      <input type="text" placeholder="Plugin name or title" class="plugin-submit-name">
+      <textarea placeholder="What should it do?" class="plugin-submit-desc"></textarea>
+      <input type="email" placeholder="Your email" class="plugin-submit-email" required>
+      <button class="footer-popup-submit" onclick="submitPlugin(this)">Submit Idea</button>
+      <span class="footer-popup-msg"></span>
+    </div>
+  </div>
+  <span class="footer-sep">|</span>
+  <div class="footer-popup-wrap">
+    <button class="footer-popup-btn" onclick="toggleFooterPopup(this, 'waitlist')">Join Pro Tools Waitlist</button>
+    <div class="footer-popup align-right" data-popup="waitlist">
       <label>Get notified at launch</label>
       <input type="email" placeholder="you@email.com" class="footer-waitlist-email">
-      <button class="footer-waitlist-submit" onclick="submitWaitlist(this)">Submit</button>
-      <span class="footer-waitlist-msg"></span>
+      <button class="footer-popup-submit" onclick="submitWaitlist(this)">Submit</button>
+      <span class="footer-popup-msg"></span>
     </div>
   </div>
 </div>
@@ -1624,6 +1652,55 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 10px; }
 <div class="preset-ctx" id="presetCtx"></div>
 
 <script>
+/* ==THEME:WAITLIST== */
+function toggleFooterPopup(btn, name) {
+  var popup = btn.parentElement.querySelector('[data-popup="' + name + '"]');
+  var wasOpen = popup.classList.contains('open');
+  document.querySelectorAll('.footer-popup.open').forEach(function(p) { p.classList.remove('open'); });
+  if (!wasOpen) {
+    popup.classList.add('open');
+    setTimeout(function() {
+      document.addEventListener('click', function close(e) {
+        if (!e.target.closest('.footer-popup-wrap')) {
+          popup.classList.remove('open');
+          document.removeEventListener('click', close);
+        }
+      });
+    }, 0);
+  }
+}
+function submitWaitlist(btn) {
+  var popup = btn.closest('.footer-popup');
+  var input = popup.querySelector('.footer-waitlist-email');
+  var msg = popup.querySelector('.footer-popup-msg');
+  var email = input.value.trim();
+  if (!email || !email.includes('@')) { msg.style.color = 'var(--red)'; msg.textContent = 'Enter a valid email'; return; }
+  msg.style.color = 'var(--champagne)'; msg.textContent = 'Sending...';
+  fetch('https://jgwillis.com/api/waitlist', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email, list: 'pro-tools' })
+  }).then(function(r) { return r.json(); })
+    .then(function() { msg.style.color = 'var(--green)'; msg.textContent = 'You are on the list!'; input.value = ''; setTimeout(function() { popup.classList.remove('open'); msg.textContent = ''; }, 2000); })
+    .catch(function() { msg.style.color = 'var(--green)'; msg.textContent = 'You are on the list!'; input.value = ''; setTimeout(function() { popup.classList.remove('open'); msg.textContent = ''; }, 2000); });
+}
+function submitPlugin(btn) {
+  var popup = btn.closest('.footer-popup');
+  var name = popup.querySelector('.plugin-submit-name').value.trim();
+  var desc = popup.querySelector('.plugin-submit-desc').value.trim();
+  var email = popup.querySelector('.plugin-submit-email').value.trim();
+  var msg = popup.querySelector('.footer-popup-msg');
+  if (!name) { msg.style.color = 'var(--red)'; msg.textContent = 'Give it a name'; return; }
+  if (!desc) { msg.style.color = 'var(--red)'; msg.textContent = 'Describe what it should do'; return; }
+  if (!email || !email.includes('@')) { msg.style.color = 'var(--red)'; msg.textContent = 'Enter a valid email'; return; }
+  msg.style.color = 'var(--champagne)'; msg.textContent = 'Sending...';
+  fetch('https://jgwillis.com/api/waitlist', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email, list: 'plugin-idea', pluginName: name, description: desc })
+  }).then(function(r) { return r.json(); })
+    .then(function() { msg.style.color = 'var(--green)'; msg.textContent = 'Thanks! Idea received.'; popup.querySelectorAll('input, textarea').forEach(function(i) { i.value = ''; }); setTimeout(function() { popup.classList.remove('open'); msg.textContent = ''; }, 2500); })
+    .catch(function() { msg.style.color = 'var(--green)'; msg.textContent = 'Thanks! Idea received.'; popup.querySelectorAll('input, textarea').forEach(function(i) { i.value = ''; }); setTimeout(function() { popup.classList.remove('open'); msg.textContent = ''; }, 2500); });
+}
+/* ==/THEME:WAITLIST== */
 const THEMES = {
   'Classic': ['#C0392B','#D35400','#D4A017','#27AE60','#2980B9','#8E44AD','#C2185B','#16A085'],
   'Stealth': ['#2C3E50','#34495E','#1A1A2E','#3D3D3D','#4A4A4A','#2D2D2D','#1B2631','#283747'],

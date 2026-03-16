@@ -8,8 +8,8 @@
   "plugins": [
     {
       "name": "lite-tools",
-      "description": "Free collection of Claude Code tools. Includes: Folder Colors (tint macOS folder icons with any color), Multiple Terminals (open color-coded tiled Terminal windows).",
-      "version": "1.3.0",
+      "description": "Free collection of Claude Code tools. Includes: Folder Colors, Glassmorphism BG, Mac Helper, Multiple Terminals, Rapid Download, Skill Recap.",
+      "version": "1.5.0",
       "author": {
         "name": "aibyjgwillis"
       },
