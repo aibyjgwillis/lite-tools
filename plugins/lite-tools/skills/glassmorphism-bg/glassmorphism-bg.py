@@ -401,6 +401,20 @@ body {
   text-transform: uppercase; letter-spacing: 0.04em;
 }
 
+.color-info {
+  display: flex; gap: 8px; margin: 8px 0 16px 0; flex-wrap: wrap;
+}
+.color-info-chip {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 6px;
+  border: 1px solid rgba(28,28,30,0.08); background: white;
+  font-family: var(--font-mono); font-size: 10px; color: var(--slate);
+}
+.color-info-dot {
+  width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0;
+}
+.color-info-chip span { user-select: all; cursor: text; }
+
 #liveCanvas { width: 100%; height: 100%; display: block; }
 
 .ctrl-panel {
@@ -488,8 +502,8 @@ body {
 
 <!-- ==THEME:NOISE_HTML== -->
 <svg class="noise-overlay" width="100%" height="100%">
-  <filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/></filter>
-  <rect width="100%" height="100%" filter="url(#noise)"/>
+  <filter id="svgNoise"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/></filter>
+  <rect width="100%" height="100%" filter="url(#svgNoise)"/>
 </svg>
 <!-- ==/THEME:NOISE_HTML== -->
 
@@ -518,6 +532,7 @@ body {
   <div class="themes" id="themes"></div>
   <div class="section-label">Color Palette</div>
   <div class="color-grid" id="colorGrid"></div>
+  <div id="colorInfo" class="color-info"></div>
   <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
     <input type="color" id="customColorPicker" value="#2C1810" style="width:36px; height:36px; border:none; border-radius:8px; cursor:pointer; background:none; padding:0;">
     <span style="font-family:var(--font-mono); font-size:11px; color:var(--slate);">Custom Color</span>
@@ -1384,8 +1399,32 @@ function rebuildSwatches() {
       div.classList.add('selected');
       selected = i;
       renderPreview();
+      updateColorInfo();
     };
     grid.appendChild(div);
+  });
+  updateColorInfo();
+}
+
+function updateColorInfo() {
+  var info = document.getElementById('colorInfo');
+  if (!info) return;
+  while (info.firstChild) info.removeChild(info.firstChild);
+  var list = getActiveGradients();
+  if (!list[selected]) return;
+  var colors = list[selected].colors;
+  colors.forEach(function(hex) {
+    var r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    var chip = document.createElement('div');
+    chip.className = 'color-info-chip';
+    var dot = document.createElement('div');
+    dot.className = 'color-info-dot';
+    dot.style.background = hex;
+    chip.appendChild(dot);
+    var txt = document.createElement('span');
+    txt.textContent = hex.toUpperCase() + '  rgb(' + r + ', ' + g + ', ' + b + ')';
+    chip.appendChild(txt);
+    info.appendChild(chip);
   });
 }
 
@@ -1848,14 +1887,12 @@ function renderToCanvas(canvas) {
   if (noiseAmt > 0) {
     var imageData = ctx.getImageData(0, 0, W, H);
     var d = imageData.data;
-    var noiseStrength = noiseAmt * 50;
-    var chunkSize = Math.max(1, Math.round(1 + grainSize * 5));
-    var gs2 = 42;
-    function gnrand() { gs2 = (gs2*16807)%2147483647; return gs2/2147483647; }
+    var noiseStrength = noiseAmt * 80;
+    var chunkSize = Math.max(1, Math.round(1 + grainSize * 8));
 
     if (chunkSize <= 1) {
       for (var p = 0; p < d.length; p += 4) {
-        var n = (gnrand()-0.5)*noiseStrength;
+        var n = (Math.random()-0.5)*noiseStrength;
         d[p] = Math.min(255, Math.max(0, d[p]+n));
         d[p+1] = Math.min(255, Math.max(0, d[p+1]+n));
         d[p+2] = Math.min(255, Math.max(0, d[p+2]+n));
@@ -1863,7 +1900,7 @@ function renderToCanvas(canvas) {
     } else {
       for (var by = 0; by < H; by += chunkSize) {
         for (var bx = 0; bx < W; bx += chunkSize) {
-          var n = (gnrand()-0.5)*noiseStrength;
+          var n = (Math.random()-0.5)*noiseStrength;
           for (var dy = 0; dy < chunkSize && by+dy < H; dy++) {
             for (var dx = 0; dx < chunkSize && bx+dx < W; dx++) {
               var idx = ((by+dy)*W+(bx+dx))*4;
