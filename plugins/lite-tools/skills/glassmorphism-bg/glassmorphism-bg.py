@@ -402,18 +402,30 @@ body {
 }
 
 .color-info {
-  display: flex; gap: 8px; margin: 8px 0 16px 0; flex-wrap: wrap;
+  display: flex; gap: 6px; margin: 8px 0 16px 0; flex-wrap: wrap; align-items: center;
 }
-.color-info-chip {
-  display: flex; align-items: center; gap: 6px;
-  padding: 4px 10px; border-radius: 6px;
+.color-info-val {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 8px; border-radius: 5px;
   border: 1px solid rgba(28,28,30,0.08); background: white;
   font-family: var(--font-mono); font-size: 10px; color: var(--slate);
+  cursor: pointer; transition: all 0.15s; position: relative;
 }
+.color-info-val:hover { border-color: var(--champagne); background: rgba(90,125,150,0.04); }
+.color-info-val:active { transform: scale(0.96); }
 .color-info-dot {
-  width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0;
+  width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0;
 }
-.color-info-chip span { user-select: all; cursor: text; }
+.color-info-sep {
+  font-family: var(--font-mono); font-size: 9px; color: rgba(28,28,30,0.25);
+}
+.copy-toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--slate); color: var(--ivory); font-family: var(--font-mono);
+  font-size: 11px; padding: 6px 14px; border-radius: 6px;
+  opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 999;
+}
+.copy-toast.show { opacity: 1; }
 
 #liveCanvas { width: 100%; height: 100%; display: block; }
 
@@ -533,12 +545,17 @@ body {
   <div class="section-label">Color Palette</div>
   <div class="color-grid" id="colorGrid"></div>
   <div id="colorInfo" class="color-info"></div>
-  <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+  <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px; flex-wrap:wrap;">
     <input type="color" id="customColorPicker" value="#2C1810" style="width:36px; height:36px; border:none; border-radius:8px; cursor:pointer; background:none; padding:0;">
     <span style="font-family:var(--font-mono); font-size:11px; color:var(--slate);">Custom Color</span>
     <span id="customColorHex" style="font-family:var(--font-mono); font-size:10px; color:var(--champagne);">#2C1810</span>
     <button class="ratio-btn" onclick="saveCustomColor()" style="font-size:10px; padding:4px 10px;">Save</button>
+    <button class="ratio-btn" onclick="generatePalettes()" style="font-size:10px; padding:4px 10px;">Generate Palette</button>
+    <button class="ratio-btn" onclick="document.getElementById('imageColorUpload').click()" style="font-size:10px; padding:4px 10px;">Pick from Image</button>
+    <input type="file" id="imageColorUpload" accept="image/*" style="display:none;" onchange="extractColorFromImage(this)">
   </div>
+  <div id="imageColorPreview" style="display:none; margin-bottom:8px; align-items:center; gap:10px;"></div>
+  <div id="generatedPalettes" class="color-grid" style="margin-bottom:12px;"></div>
   <div class="ratio-row" id="savedColorsRow" style="margin-bottom:20px;"></div>
 
   <!-- Save Export Settings -->
@@ -619,7 +636,7 @@ body {
         </div>
         <div class="slider-row">
           <label>Margin</label>
-          <input type="range" id="panelMargin" min="10" max="200" value="60">
+          <input type="range" id="panelMargin" min="0" max="200" value="60">
           <div class="val" id="panelMarginVal">60px</div>
         </div>
         <div class="slider-row">
@@ -964,6 +981,141 @@ function useCustomColor() {
   renderPreview();
 }
 
+// Color harmony helpers
+function hexToHsl(hex) {
+  var r = parseInt(hex.slice(1,3),16)/255, g = parseInt(hex.slice(3,5),16)/255, b = parseInt(hex.slice(5,7),16)/255;
+  var max = Math.max(r,g,b), min = Math.min(r,g,b), h, s, l = (max+min)/2;
+  if (max === min) { h = s = 0; } else {
+    var d = max - min;
+    s = l > 0.5 ? d/(2-max-min) : d/(max+min);
+    if (max === r) h = ((g-b)/d + (g<b?6:0))/6;
+    else if (max === g) h = ((b-r)/d + 2)/6;
+    else h = ((r-g)/d + 4)/6;
+  }
+  return [h*360, s*100, l*100];
+}
+
+function hslToHex(h, s, l) {
+  h = ((h % 360) + 360) % 360;
+  s = Math.max(0, Math.min(100, s)) / 100;
+  l = Math.max(0, Math.min(100, l)) / 100;
+  var c = (1 - Math.abs(2*l-1)) * s, x = c * (1 - Math.abs((h/60)%2-1)), m = l - c/2;
+  var r, g, b;
+  if (h < 60) { r=c; g=x; b=0; }
+  else if (h < 120) { r=x; g=c; b=0; }
+  else if (h < 180) { r=0; g=c; b=x; }
+  else if (h < 240) { r=0; g=x; b=c; }
+  else if (h < 300) { r=x; g=0; b=c; }
+  else { r=c; g=0; b=x; }
+  return '#' + [r+m, g+m, b+m].map(function(v) { return Math.round(v*255).toString(16).padStart(2,'0'); }).join('');
+}
+
+function makeGrad(name, h, s, l) {
+  return { name: name, colors: [hslToHex(h, s, l-8), hslToHex(h, s, l), hslToHex(h, s, l+8)] };
+}
+
+function generatePalettes() {
+  var hex = customColorPicker.value;
+  var hsl = hexToHsl(hex);
+  var h = hsl[0], s = hsl[1], l = hsl[2];
+
+  var palettes = [
+    makeGrad('Base', h, s, l),
+    makeGrad('Complement', (h+180)%360, s, l),
+    makeGrad('Analogous 1', (h+30)%360, s, l),
+    makeGrad('Analogous 2', (h-30+360)%360, s, l),
+    makeGrad('Triadic 1', (h+120)%360, s, l),
+    makeGrad('Triadic 2', (h+240)%360, s, l),
+    makeGrad('Split Comp 1', (h+150)%360, s, l),
+    makeGrad('Split Comp 2', (h+210)%360, s, l),
+  ];
+
+  var grid = document.getElementById('generatedPalettes');
+  while (grid.firstChild) grid.removeChild(grid.firstChild);
+
+  palettes.forEach(function(g) {
+    var div = document.createElement('div');
+    div.className = 'color-swatch';
+    div.style.background = 'linear-gradient(135deg, ' + g.colors[0] + ', ' + g.colors[1] + ', ' + g.colors[2] + ')';
+    var lbl = document.createElement('span');
+    lbl.className = 'swatch-name';
+    lbl.textContent = g.name;
+    div.appendChild(lbl);
+    div.onclick = function() {
+      document.querySelectorAll('.color-swatch').forEach(function(s) { s.classList.remove('selected'); });
+      div.classList.add('selected');
+      var activeList = getActiveGradients();
+      // Remove any previous generated entry
+      for (var i = activeList.length - 1; i >= 0; i--) {
+        if (activeList[i]._generated) activeList.splice(i, 1);
+      }
+      var gen = { name: g.name, colors: g.colors.slice(), _generated: true };
+      activeList.push(gen);
+      selected = activeList.length - 1;
+      rebuildSwatches();
+      renderPreview();
+    };
+    grid.appendChild(div);
+  });
+}
+
+// Extract dominant color from uploaded image
+function extractColorFromImage(input) {
+  if (!input.files || !input.files[0]) return;
+  var file = input.files[0];
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var size = 64;
+      canvas.width = size;
+      canvas.height = size;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, size, size);
+      var data = ctx.getImageData(0, 0, size, size).data;
+
+      // Average color
+      var rT = 0, gT = 0, bT = 0, count = 0;
+      for (var i = 0; i < data.length; i += 4) {
+        rT += data[i]; gT += data[i+1]; bT += data[i+2]; count++;
+      }
+      var rA = Math.round(rT/count), gA = Math.round(gT/count), bA = Math.round(bT/count);
+      var hex = '#' + rA.toString(16).padStart(2,'0') + gA.toString(16).padStart(2,'0') + bA.toString(16).padStart(2,'0');
+
+      // Set the color picker to extracted color
+      customColorPicker.value = hex;
+      customColorHex.textContent = hex;
+
+      // Show preview
+      var preview = document.getElementById('imageColorPreview');
+      preview.style.display = 'flex';
+      while (preview.firstChild) preview.removeChild(preview.firstChild);
+      var thumb = document.createElement('img');
+      thumb.src = e.target.result;
+      thumb.style.cssText = 'width:36px; height:36px; border-radius:6px; object-fit:cover; border:1px solid rgba(28,28,30,0.1);';
+      preview.appendChild(thumb);
+      var arrow = document.createElement('span');
+      arrow.style.cssText = 'font-family:var(--font-mono); font-size:10px; color:var(--champagne);';
+      arrow.textContent = '>';
+      preview.appendChild(arrow);
+      var dot = document.createElement('div');
+      dot.style.cssText = 'width:36px; height:36px; border-radius:6px; background:' + hex + '; border:1px solid rgba(28,28,30,0.1);';
+      preview.appendChild(dot);
+      var label = document.createElement('span');
+      label.style.cssText = 'font-family:var(--font-mono); font-size:10px; color:var(--slate);';
+      label.textContent = hex.toUpperCase();
+      preview.appendChild(label);
+
+      // Auto-generate palettes
+      useCustomColor();
+      generatePalettes();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
 
 // Saved custom colors
 var CUSTOM_COLORS_KEY = 'glassmorphism-custom-colors';
@@ -1406,26 +1558,62 @@ function rebuildSwatches() {
   updateColorInfo();
 }
 
+function copyVal(text) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+  var toast = document.getElementById('copyToast');
+  toast.textContent = 'Copied: ' + text;
+  toast.classList.add('show');
+  clearTimeout(copyVal._t);
+  copyVal._t = setTimeout(function() { toast.classList.remove('show'); }, 1200);
+}
+
+function makeClickable(text, parent) {
+  var el = document.createElement('div');
+  el.className = 'color-info-val';
+  el.textContent = text;
+  el.onclick = function() { copyVal(text); };
+  parent.appendChild(el);
+  return el;
+}
+
 function updateColorInfo() {
   var info = document.getElementById('colorInfo');
   if (!info) return;
   while (info.firstChild) info.removeChild(info.firstChild);
   var list = getActiveGradients();
   if (!list[selected]) return;
-  var colors = list[selected].colors;
-  colors.forEach(function(hex) {
-    var r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
-    var chip = document.createElement('div');
-    chip.className = 'color-info-chip';
-    var dot = document.createElement('div');
-    dot.className = 'color-info-dot';
-    dot.style.background = hex;
-    chip.appendChild(dot);
-    var txt = document.createElement('span');
-    txt.textContent = hex.toUpperCase() + '  rgb(' + r + ', ' + g + ', ' + b + ')';
-    chip.appendChild(txt);
-    info.appendChild(chip);
-  });
+  var hex = list[selected].colors[2];
+  var r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+
+  var dot = document.createElement('div');
+  dot.className = 'color-info-dot';
+  dot.style.background = hex;
+  info.appendChild(dot);
+
+  makeClickable(hex.toUpperCase(), info);
+
+  var sep = document.createElement('span');
+  sep.className = 'color-info-sep';
+  sep.textContent = '|';
+  info.appendChild(sep);
+
+  makeClickable('rgb(' + r + ', ' + g + ', ' + b + ')', info);
+
+  var sep2 = document.createElement('span');
+  sep2.className = 'color-info-sep';
+  sep2.textContent = '|';
+  info.appendChild(sep2);
+
+  makeClickable('R: ' + r, info);
+  makeClickable('G: ' + g, info);
+  makeClickable('B: ' + b, info);
 }
 
 // Toggle
@@ -1946,6 +2134,7 @@ function exportFull() {
 
 renderPreview();
 </script>
+<div class="copy-toast" id="copyToast">Copied</div>
 </body>
 </html>"""
 
